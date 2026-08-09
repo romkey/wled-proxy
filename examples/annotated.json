@@ -1,0 +1,96 @@
+// Every option the proxy understands, with its default value.
+// "//" line comments are allowed; anything else must be plain JSON.
+{
+  // debug | info | warning | error
+  "log_level": "info",
+
+  // The single strip that everything upstream sees. Targets carve it up.
+  "virtual_strip": {
+    "led_count": 300,
+    "format": "rgb"          // rgb | rgbw
+  },
+
+  // What the proxy listens for. Enable only what you actually send.
+  "inputs": {
+    "ddp": {
+      "enabled": true,
+      "bind": "0.0.0.0",
+      "port": 4048,
+      "format": "rgb",       // defaults to virtual_strip.format
+      "channel_offset": 0    // shift incoming data along the strip
+    },
+    "artnet": {
+      "enabled": false,
+      "bind": "0.0.0.0",
+      "port": 6454,
+      "format": "rgb",
+      "start_universe": 0,           // WLED sends Art-Net starting at universe 0
+      "channels_per_universe": 510,  // 510 for RGB (170 px), 512 for RGBW (128 px)
+      "dmx_start_channel": 1
+    },
+    "e131": {
+      "enabled": false,
+      "bind": "0.0.0.0",
+      "port": 5568,
+      "format": "rgb",
+      "start_universe": 1,
+      "channels_per_universe": 510,
+      "dmx_start_channel": 1,
+      "multicast": true,                  // join 239.255.x.x for each universe
+      "multicast_interface": "0.0.0.0",
+      "min_priority": 0                   // ignore sources below this priority
+    }
+  },
+
+  "output": {
+    "max_fps": 60,           // upper bound on frames forwarded per second
+    "frame_timeout_ms": 15,  // forward a frame this long after the last packet
+                             // even if the sender never signalled end of frame
+    "idle_refresh_hz": 0,    // resend the last frame at this rate when idle,
+                             // useful to hold devices in realtime mode
+    "resolve_interval_s": 300  // re-resolve target host names this often
+  },
+
+  "status": {
+    "enabled": true,
+    "bind": "0.0.0.0",
+    "port": 8080
+  },
+
+  // Applied to every target, then overridden by the target's own settings.
+  "target_defaults": {
+    "protocol": "ddp",
+    "format": "rgb",
+    "gamma": 1.0,
+    "brightness": 1.0
+  },
+
+  "targets": [
+    {
+      "name": "example",       // defaults to host, must be unique
+      "enabled": true,
+      "host": "10.0.0.51",     // IP address or host name
+      "protocol": "ddp",       // ddp | artnet | e131
+      "port": 4048,            // defaults to 4048 / 6454 / 5568
+      "format": "rgb",         // rgb | rgbw, must match the device's bus
+      "start": 0,              // first virtual pixel; defaults to the end of
+                               // the previous target, so strips chain
+      "count": 300,            // how many virtual pixels this device shows
+      "reverse": false,        // device is wired against the strip direction
+      "color_order": "rgb",    // any permutation, e.g. grb; WLED does this
+                               // itself so leave it alone for WLED targets
+      "brightness": 1.0,       // 0.0 - 1.0, applied on top of the source
+      "gamma": 1.0,            // 1.0 = off
+      "white_mode": "none",    // RGB source -> RGBW device: none | brighter |
+                               // accurate | max | luminance
+      "white_merge": "add",    // RGBW source -> RGB device: add | drop
+      "remote_start": 0,       // first pixel to write on the device (DDP only)
+      "universe": 0,           // first universe (artnet: 0, e131: 1)
+      "channels_per_universe": 510,
+      "priority": 100,         // E1.31 priority
+      "multicast": false,      // E1.31 multicast instead of unicast
+      "multicast_ttl": 1,
+      "source_name": "WLED Proxy"   // shown by E1.31 receivers
+    }
+  ]
+}

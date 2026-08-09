@@ -1,0 +1,34 @@
+{
+  "log_level": "info",
+
+  "virtual_strip": {
+    "led_count": 900,
+    "format": "rgb"
+  },
+
+  "inputs": {
+    "ddp": { "enabled": true, "port": 4048 },
+    "artnet": { "enabled": false, "port": 6454, "start_universe": 0 },
+    "e131": { "enabled": false, "port": 5568, "start_universe": 1, "multicast": true }
+  },
+
+  "output": {
+    "max_fps": 60
+  },
+
+  "status": {
+    "enabled": true,
+    "port": 8080
+  },
+
+  "target_defaults": {
+    "protocol": "ddp",
+    "format": "rgb"
+  },
+
+  "targets": [
+    { "name": "bench-left",   "host": "10.0.0.51", "count": 300 },
+    { "name": "bench-right",  "host": "10.0.0.52", "count": 300 },
+    { "name": "ceiling",      "host": "10.0.0.53", "count": 300, "reverse": true }
+  ]
+}

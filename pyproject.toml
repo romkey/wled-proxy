@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wled-proxy"
+version = "1.0.0"
+description = "Present any number of WLED devices as a single large virtual LED strip"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Networking",
+]
+
+[project.scripts]
+wled-proxy = "wled_proxy.__main__:main"
+wled-proxy-testpattern = "wled_proxy.testpattern:main"
+
+[tool.setuptools]
+packages = ["wled_proxy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

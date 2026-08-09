@@ -1,0 +1,44 @@
+services:
+  wled-proxy:
+    build: .
+    image: wled-proxy:latest
+    container_name: wled-proxy
+    restart: unless-stopped
+
+    # Host networking keeps UDP latency down and is the only mode in which
+    # sACN multicast input works out of the box. If it is not available to
+    # you, comment it out and either uncomment the ports block below (unicast
+    # only) or use examples/docker-compose.macvlan.yml, which gives the proxy
+    # its own address on the LAN. See "Networking" in the README.
+    network_mode: host
+
+    # ports:
+    #   - "4048:4048/udp"   # DDP
+    #   - "6454:6454/udp"   # Art-Net
+    #   - "5568:5568/udp"   # E1.31 / sACN
+    #   - "8080:8080/tcp"   # status page
+
+    volumes:
+      - ./config.json:/config/config.json:ro
+
+    environment:
+      WLED_PROXY_CONFIG: /config/config.json
+      # Point the healthcheck somewhere else if you move the status port.
+      HEALTH_URL: http://127.0.0.1:8080/healthz
+
+    # Checks the proxy's own status server from inside the container. Remove
+    # this if you set "status": {"enabled": false} in config.json, otherwise
+    # the container will be reported unhealthy.
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import os,urllib.request; urllib.request.urlopen(os.environ['HEALTH_URL'], timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

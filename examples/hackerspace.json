@@ -1,0 +1,64 @@
+// A worked example: two dozen controllers arranged as one 6980 pixel strip
+// that runs around the whole space. Because "start" is left out, each target
+// picks up where the previous one ended, so re-ordering this list re-orders
+// the physical layout and nothing else has to change.
+{
+  "virtual_strip": { "led_count": 6980 },
+
+  "inputs": {
+    "ddp": { "enabled": true }
+  },
+
+  "output": {
+    "max_fps": 45
+  },
+
+  "target_defaults": {
+    "protocol": "ddp",
+    "format": "rgb",
+    "count": 300
+  },
+
+  "targets": [
+    { "name": "front-door",     "host": "10.10.20.11" },
+    { "name": "lobby-north",    "host": "10.10.20.12" },
+    { "name": "lobby-east",     "host": "10.10.20.13" },
+    { "name": "lobby-south",    "host": "10.10.20.14" },
+    { "name": "woodshop-1",     "host": "10.10.20.15" },
+    { "name": "woodshop-2",     "host": "10.10.20.16", "reverse": true },
+    { "name": "metalshop-1",    "host": "10.10.20.17" },
+    { "name": "metalshop-2",    "host": "10.10.20.18", "reverse": true },
+    { "name": "electronics-1",  "host": "10.10.20.19" },
+    { "name": "electronics-2",  "host": "10.10.20.20" },
+    { "name": "laser-cutter",   "host": "10.10.20.21", "count": 150 },
+    { "name": "3d-printers",    "host": "10.10.20.22", "count": 150 },
+    { "name": "kitchen",        "host": "10.10.20.23" },
+    { "name": "lounge-north",   "host": "10.10.20.24" },
+    { "name": "lounge-west",    "host": "10.10.20.25", "reverse": true },
+    { "name": "classroom",      "host": "10.10.20.26" },
+
+    // An older RGBW strip: the proxy synthesises the white channel.
+    { "name": "bar",            "host": "10.10.20.27", "format": "rgbw",
+      "white_mode": "accurate" },
+
+    // A dim corner that should stay subtle no matter what the show sends.
+    { "name": "server-rack",    "host": "10.10.20.28", "brightness": 0.25 },
+
+    // Two non-WLED Art-Net nodes on the stage truss.
+    { "name": "truss-left",     "host": "10.10.20.40", "protocol": "artnet",
+      "universe": 0, "count": 340 },
+    { "name": "truss-right",    "host": "10.10.20.41", "protocol": "artnet",
+      "universe": 0, "count": 340, "reverse": true },
+
+    // An sACN fixture controller that listens on multicast universes 20-23.
+    { "name": "stage-wash",     "protocol": "e131", "host": "10.10.20.42",
+      "multicast": true, "universe": 20, "count": 600, "priority": 150 },
+
+    { "name": "hallway-1",      "host": "10.10.20.29" },
+    { "name": "hallway-2",      "host": "10.10.20.30" },
+
+    // Mirrors the front door section onto a sign, rather than extending the
+    // strip: an explicit "start" resets where the next target would land.
+    { "name": "sign",           "host": "10.10.20.31", "start": 0, "count": 300 }
+  ]
+}

@@ -1,0 +1,73 @@
+# Alternative to host networking: give the proxy its own IP address on the
+# LAN, so sACN multicast, broadcast and mDNS all behave as if it were a
+# physical device. Use this when host networking is unavailable, for example
+# under a managed Docker platform or where the host's own ports are spoken for.
+#
+# Copy this into the project root, next to config.json, and run:
+#     docker compose -f docker-compose.macvlan.yml up -d
+#
+# Three things to change before it will work:
+#   1. parent      - the host NIC facing your LED VLAN (ip -br link to list)
+#   2. subnet/gateway - your LED VLAN
+#   3. ip_range and ipv4_address - addresses OUTSIDE the DHCP pool, because
+#      Docker's IPAM assigns them statically and will not ask a DHCP server
+#
+# The host cannot reach a macvlan container through the parent NIC; that is a
+# kernel restriction, not a Docker bug. The status page is reachable from
+# everywhere else on the LAN. See "Networking" in the README for the shim
+# interface that fixes it if you need access from the host itself.
+
+services:
+  wled-proxy:
+    build: .
+    image: wled-proxy:latest
+    container_name: wled-proxy
+    restart: unless-stopped
+
+    networks:
+      leds:
+        ipv4_address: 10.10.20.240
+
+    volumes:
+      - ./config.json:/config/config.json:ro
+
+    environment:
+      WLED_PROXY_CONFIG: /config/config.json
+      HEALTH_URL: http://127.0.0.1:8080/healthz
+
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import os,urllib.request; urllib.request.urlopen(os.environ['HEALTH_URL'], timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  leds:
+    driver: macvlan
+    driver_opts:
+      parent: eno1
+      # For a tagged VLAN, create the sub-interface on the host first
+      # (ip link add link eno1 name eno1.20 type vlan id 20) and use
+      # parent: eno1.20 here.
+
+    # On WiFi, swap the two lines above for the ipvlan form below. Access
+    # points drop frames from MAC addresses they did not authenticate, which
+    # breaks macvlan; ipvlan in L2 mode shares the host's MAC and works.
+    #   driver: ipvlan
+    #   driver_opts:
+    #     parent: wlan0
+    #     ipvlan_mode: l2
+
+    ipam:
+      config:
+        - subnet: 10.10.20.0/24
+          gateway: 10.10.20.1
+          ip_range: 10.10.20.240/28
