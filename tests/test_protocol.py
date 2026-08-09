@@ -46,9 +46,7 @@ def test_ddp_rejects_bad_packets(mangle):
 
 def test_ddp_timecode_flag_shifts_the_payload():
     payload = bytes(range(12))
-    packet = bytearray(
-        protocol.build_ddp(0, payload, rgbw=False, sequence=1, push=True)
-    )
+    packet = bytearray(protocol.build_ddp(0, payload, rgbw=False, sequence=1, push=True))
     packet[0] |= protocol.DDP_FLAGS_TIME
     packet[protocol.DDP_HEADER_LEN : protocol.DDP_HEADER_LEN] = b"\x00\x00\x00\x00"
     parsed = protocol.parse_ddp(bytes(packet))
@@ -113,9 +111,7 @@ def test_e131_round_trip():
 
 def test_e131_pdu_lengths_match_the_standard():
     """A full 512 channel universe has well known PDU flags and length words."""
-    packet = protocol.build_e131(
-        1, bytes(512), sequence=1, cid=bytes(16), source_name=bytes(64)
-    )
+    packet = protocol.build_e131(1, bytes(512), sequence=1, cid=bytes(16), source_name=bytes(64))
     assert len(packet) == 638
     assert packet[16:18] == b"\x72\x6e"  # root layer
     assert packet[38:40] == b"\x72\x58"  # framing layer
@@ -125,9 +121,7 @@ def test_e131_pdu_lengths_match_the_standard():
 
 def test_e131_ignores_preview_and_non_zero_start_code():
     packet = bytearray(
-        protocol.build_e131(
-            1, bytes(30), sequence=1, cid=bytes(16), source_name=bytes(64)
-        )
+        protocol.build_e131(1, bytes(30), sequence=1, cid=bytes(16), source_name=bytes(64))
     )
     preview = bytearray(packet)
     preview[112] = protocol.E131_OPTION_PREVIEW

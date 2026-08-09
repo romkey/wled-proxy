@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import logging
 import socket
@@ -66,14 +67,10 @@ class Target:
     def open(self) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(False)
-        try:
+        with contextlib.suppress(OSError):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, SEND_BUFFER_BYTES)
-        except OSError:
-            pass
         if self.config.multicast:
-            sock.setsockopt(
-                socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.config.multicast_ttl
-            )
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.config.multicast_ttl)
         self._sock = sock
 
     def close(self) -> None:
@@ -254,9 +251,7 @@ def describe_coverage(
 _INCREMENT = bytes(min(255, i + 1) for i in range(256))
 
 
-def _runs(
-    counts: bytearray, value: int, at_least: bool = False
-) -> list[tuple[int, int]]:
+def _runs(counts: bytearray, value: int, at_least: bool = False) -> list[tuple[int, int]]:
     runs = []
     start = None
     for i, count in enumerate(counts):

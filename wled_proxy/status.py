@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from collections.abc import Callable
@@ -149,9 +150,7 @@ class StatusServer:
         await self._server.wait_closed()
         self._server = None
 
-    async def _handle(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-    ) -> None:
+    async def _handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         try:
             request = await asyncio.wait_for(reader.readline(), timeout=5.0)
             if not request or len(request) > MAX_REQUEST_BYTES:
@@ -167,9 +166,7 @@ class StatusServer:
                     break
 
             if method not in ("GET", "HEAD"):
-                await self._respond(
-                    writer, 405, "text/plain", b"method not allowed", method
-                )
+                await self._respond(writer, 405, "text/plain", b"method not allowed", method)
             elif path in ("/", "/index.html"):
                 await self._respond(
                     writer,
@@ -191,10 +188,8 @@ class StatusServer:
             log.debug("status request failed", exc_info=True)
         finally:
             writer.close()
-            try:
+            with contextlib.suppress(ConnectionError, OSError):
                 await writer.wait_closed()
-            except (ConnectionError, OSError):
-                pass
 
     async def _respond(
         self,

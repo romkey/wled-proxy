@@ -96,9 +96,7 @@ def send_ddp(sock, address, payload: bytes, rgbw: bool, sequence: int) -> int:
     return sequence
 
 
-def send_artnet(
-    sock, address, payload: bytes, size: int, universe: int, sequence: int
-) -> int:
+def send_artnet(sock, address, payload: bytes, size: int, universe: int, sequence: int) -> int:
     sequence = sequence % 255 + 1
     for position in range(0, len(payload), size):
         sock.sendto(
@@ -144,36 +142,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int)
     parser.add_argument("--protocol", choices=("ddp", "artnet", "e131"), default="ddp")
-    parser.add_argument(
-        "--count", type=int, default=300, help="number of pixels to send"
-    )
+    parser.add_argument("--count", type=int, default=300, help="number of pixels to send")
     parser.add_argument("--format", choices=("rgb", "rgbw"), default="rgb")
     parser.add_argument("--pattern", choices=PATTERNS, default="rainbow")
     parser.add_argument("--fps", type=float, default=30.0)
-    parser.add_argument(
-        "--speed", type=float, default=0.2, help="pattern cycles per second"
-    )
+    parser.add_argument("--speed", type=float, default=0.2, help="pattern cycles per second")
     parser.add_argument("--brightness", type=float, default=1.0)
-    parser.add_argument(
-        "--color", default="255,255,255", help="colour for --pattern solid"
-    )
+    parser.add_argument("--color", default="255,255,255", help="colour for --pattern solid")
     parser.add_argument("--universe", type=int, help="first universe for artnet/e131")
-    parser.add_argument(
-        "--duration", type=float, default=0.0, help="seconds to run, 0 = forever"
-    )
+    parser.add_argument("--duration", type=float, default=0.0, help="seconds to run, 0 = forever")
     args = parser.parse_args(argv)
 
     port = args.port or DEFAULT_PORTS[args.protocol]
     address = (args.host, port)
     universe = (
-        args.universe
-        if args.universe is not None
-        else (0 if args.protocol == "artnet" else 1)
+        args.universe if args.universe is not None else (0 if args.protocol == "artnet" else 1)
     )
     universe_size = (
-        protocol.ARTNET_CHANNELS_RGBW
-        if args.format == "rgbw"
-        else protocol.ARTNET_CHANNELS_RGB
+        protocol.ARTNET_CHANNELS_RGBW if args.format == "rgbw" else protocol.ARTNET_CHANNELS_RGB
     )
     try:
         color = tuple(int(v) & 0xFF for v in args.color.split(","))
@@ -223,13 +209,9 @@ def main(argv: list[str] | None = None) -> int:
                 frame = to_rgbw(frame)
 
             if args.protocol == "ddp":
-                sequence = send_ddp(
-                    sock, address, frame, args.format == "rgbw", sequence
-                )
+                sequence = send_ddp(sock, address, frame, args.format == "rgbw", sequence)
             elif args.protocol == "artnet":
-                sequence = send_artnet(
-                    sock, address, frame, universe_size, universe, sequence
-                )
+                sequence = send_artnet(sock, address, frame, universe_size, universe, sequence)
             else:
                 send_e131(
                     sock,
@@ -251,9 +233,7 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         sock.close()
     elapsed = time.monotonic() - started
-    print(
-        f"\nsent {frames} frames in {elapsed:.1f}s ({frames / max(elapsed, 1e-6):.1f} fps)"
-    )
+    print(f"\nsent {frames} frames in {elapsed:.1f}s ({frames / max(elapsed, 1e-6):.1f} fps)")
     return 0
 
 

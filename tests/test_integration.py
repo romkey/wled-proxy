@@ -232,9 +232,7 @@ async def test_frame_timeout_sends_even_without_a_push():
                 "inputs": {"ddp": {"port": input_port}},
                 "status": {"enabled": False},
                 "output": {"max_fps": 1000, "frame_timeout_ms": 20},
-                "targets": [
-                    {"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}
-                ],
+                "targets": [{"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}],
             }
         )
     )
@@ -263,9 +261,7 @@ async def test_idle_strip_sends_nothing():
                 "virtual_strip": {"led_count": 10},
                 "inputs": {"ddp": {"port": free_port()}},
                 "status": {"enabled": False},
-                "targets": [
-                    {"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}
-                ],
+                "targets": [{"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}],
             }
         )
     )
@@ -287,9 +283,7 @@ async def test_idle_refresh_keeps_resending_the_last_frame():
                 "inputs": {"ddp": {"port": free_port()}},
                 "status": {"enabled": False},
                 "output": {"idle_refresh_hz": 40},
-                "targets": [
-                    {"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}
-                ],
+                "targets": [{"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}],
             }
         )
     )
@@ -312,9 +306,7 @@ async def test_status_endpoint_reports_targets():
                 "virtual_strip": {"led_count": 10},
                 "inputs": {"ddp": {"enabled": False}},
                 "status": {"enabled": False},
-                "targets": [
-                    {"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}
-                ],
+                "targets": [{"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}],
             }
         )
     )

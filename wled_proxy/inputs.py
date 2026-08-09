@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import socket
 import struct
@@ -117,12 +118,8 @@ class InputBase(asyncio.DatagramProtocol):
             self.transport.close()
             self.transport = None
 
-    def _store(
-        self, channel_offset: int, data: memoryview, channels_per_pixel: int
-    ) -> None:
-        self.channels_written += self.canvas.write(
-            channel_offset, data, channels_per_pixel
-        )
+    def _store(self, channel_offset: int, data: memoryview, channels_per_pixel: int) -> None:
+        self.channels_written += self.canvas.write(channel_offset, data, channels_per_pixel)
         self._on_write()
 
     def _commit(self) -> None:
@@ -230,10 +227,8 @@ def _make_socket(bind: str, port: int) -> socket.socket:
     # the box. SO_REUSEPORT is deliberately not set: on Linux it would let a
     # second instance silently bind the same port and steal half the packets.
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    try:
+    with contextlib.suppress(OSError):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, RECEIVE_BUFFER_BYTES)
-    except OSError:
-        pass
     try:
         sock.bind((bind, port))
     except OSError as exc:
@@ -247,9 +242,7 @@ def join_multicast(sock: socket.socket, groups: list[str], interface: str) -> li
     """Join sACN multicast groups, returning the ones that succeeded."""
     joined, failed = [], []
     for group in groups:
-        request = struct.pack(
-            "4s4s", socket.inet_aton(group), socket.inet_aton(interface)
-        )
+        request = struct.pack("4s4s", socket.inet_aton(group), socket.inet_aton(interface))
         try:
             sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, request)
         except OSError as exc:

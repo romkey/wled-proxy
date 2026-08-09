@@ -56,9 +56,7 @@ def parse_ddp(packet: memoryview | bytes) -> DDPData | None:
     """Parse a DDP data packet, or return None if it carries no pixel data."""
     if len(packet) < DDP_HEADER_LEN:
         return None
-    flags, sequence, data_type, destination, offset, data_len = _DDP_HEADER.unpack_from(
-        packet
-    )
+    flags, sequence, data_type, destination, offset, data_len = _DDP_HEADER.unpack_from(packet)
 
     if flags & DDP_FLAGS_VER_MASK != DDP_FLAGS_VER1:
         return None
@@ -89,9 +87,7 @@ def parse_ddp(packet: memoryview | bytes) -> DDPData | None:
     )
 
 
-def build_ddp(
-    offset: int, data: bytes, *, rgbw: bool, sequence: int, push: bool
-) -> bytes:
+def build_ddp(offset: int, data: bytes, *, rgbw: bool, sequence: int, push: bool) -> bytes:
     """Build one DDP data packet addressed at ``offset`` channels into the display."""
     header = _DDP_HEADER.pack(
         DDP_FLAGS_VER1 | (DDP_FLAGS_PUSH if push else 0),
@@ -156,9 +152,7 @@ def parse_artnet_dmx(packet: memoryview | bytes) -> ArtnetData | None:
     )
 
 
-def build_artnet_dmx(
-    universe: int, data: bytes, *, sequence: int, physical: int = 0
-) -> bytes:
+def build_artnet_dmx(universe: int, data: bytes, *, sequence: int, physical: int = 0) -> bytes:
     """Build an ArtDmx packet. Odd length payloads are padded, as the spec requires."""
     if len(data) & 1:
         data = bytes(data) + b"\x00"

@@ -121,11 +121,7 @@ def test_multicast_output_is_rejected_for_non_sacn_targets():
     with pytest.raises(ConfigError) as error:
         parse(base(targets=[{"host": "a", "count": 10, "multicast": True}]))
     assert "only available for the e131 protocol" in str(error.value)
-    parse(
-        base(
-            targets=[{"host": "a", "count": 10, "protocol": "e131", "multicast": True}]
-        )
-    )
+    parse(base(targets=[{"host": "a", "count": 10, "protocol": "e131", "multicast": True}]))
 
 
 def test_artnet_universe_size_must_hold_whole_pixels():

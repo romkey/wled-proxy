@@ -44,9 +44,7 @@ class Section:
         if raw is None:
             raw = {}
         if not isinstance(raw, dict):
-            raise ConfigError(
-                f"{path or 'config'}: expected an object, got {_typename(raw)}"
-            )
+            raise ConfigError(f"{path or 'config'}: expected an object, got {_typename(raw)}")
         self._raw = dict(raw)
         self._path = path
 
@@ -64,9 +62,7 @@ class Section:
     def string(self, key, default=_MISSING, *, choices=None, lower=True) -> Any:
         value = self._take(key, default)
         if not isinstance(value, str):
-            raise ConfigError(
-                f"{self._where(key)}: expected a string, got {_typename(value)}"
-            )
+            raise ConfigError(f"{self._where(key)}: expected a string, got {_typename(value)}")
         if lower:
             value = value.strip().lower()
         if choices and value not in choices:
@@ -78,42 +74,28 @@ class Section:
     def integer(self, key, default=_MISSING, *, minimum=None, maximum=None) -> Any:
         value = self._take(key, default)
         if isinstance(value, bool) or not isinstance(value, int):
-            raise ConfigError(
-                f"{self._where(key)}: expected an integer, got {_typename(value)}"
-            )
+            raise ConfigError(f"{self._where(key)}: expected an integer, got {_typename(value)}")
         if minimum is not None and value < minimum:
-            raise ConfigError(
-                f"{self._where(key)}: must be at least {minimum}, got {value}"
-            )
+            raise ConfigError(f"{self._where(key)}: must be at least {minimum}, got {value}")
         if maximum is not None and value > maximum:
-            raise ConfigError(
-                f"{self._where(key)}: must be at most {maximum}, got {value}"
-            )
+            raise ConfigError(f"{self._where(key)}: must be at most {maximum}, got {value}")
         return value
 
     def number(self, key, default=_MISSING, *, minimum=None, maximum=None) -> Any:
         value = self._take(key, default)
         if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ConfigError(
-                f"{self._where(key)}: expected a number, got {_typename(value)}"
-            )
+            raise ConfigError(f"{self._where(key)}: expected a number, got {_typename(value)}")
         value = float(value)
         if minimum is not None and value < minimum:
-            raise ConfigError(
-                f"{self._where(key)}: must be at least {minimum}, got {value}"
-            )
+            raise ConfigError(f"{self._where(key)}: must be at least {minimum}, got {value}")
         if maximum is not None and value > maximum:
-            raise ConfigError(
-                f"{self._where(key)}: must be at most {maximum}, got {value}"
-            )
+            raise ConfigError(f"{self._where(key)}: must be at most {maximum}, got {value}")
         return value
 
     def boolean(self, key, default=_MISSING) -> Any:
         value = self._take(key, default)
         if not isinstance(value, bool):
-            raise ConfigError(
-                f"{self._where(key)}: expected true or false, got {_typename(value)}"
-            )
+            raise ConfigError(f"{self._where(key)}: expected true or false, got {_typename(value)}")
         return value
 
     def section(self, key) -> Section:
@@ -122,17 +104,13 @@ class Section:
     def array(self, key, default=_MISSING) -> list:
         value = self._take(key, default)
         if not isinstance(value, list):
-            raise ConfigError(
-                f"{self._where(key)}: expected a list, got {_typename(value)}"
-            )
+            raise ConfigError(f"{self._where(key)}: expected a list, got {_typename(value)}")
         return value
 
     def raw_dict(self, key) -> dict:
         value = self._raw.pop(key, None) or {}
         if not isinstance(value, dict):
-            raise ConfigError(
-                f"{self._where(key)}: expected an object, got {_typename(value)}"
-            )
+            raise ConfigError(f"{self._where(key)}: expected an object, got {_typename(value)}")
         return value
 
     def finish(self) -> None:
@@ -184,8 +162,8 @@ class ArtnetInputConfig:
     dmx_start_channel: int = 1
 
     def __post_init__(self):
-        self.channels_per_universe = (
-            self.channels_per_universe or _default_universe_size(self.format)
+        self.channels_per_universe = self.channels_per_universe or _default_universe_size(
+            self.format
         )
 
 
@@ -203,8 +181,8 @@ class E131InputConfig:
     min_priority: int = 0
 
     def __post_init__(self):
-        self.channels_per_universe = (
-            self.channels_per_universe or _default_universe_size(self.format)
+        self.channels_per_universe = self.channels_per_universe or _default_universe_size(
+            self.format
         )
 
 
@@ -256,8 +234,8 @@ class TargetConfig:
 
     def __post_init__(self):
         self.color_order = self.color_order or self.format
-        self.channels_per_universe = (
-            self.channels_per_universe or _default_universe_size(self.format)
+        self.channels_per_universe = self.channels_per_universe or _default_universe_size(
+            self.format
         )
 
     @property
@@ -296,7 +274,7 @@ def load(path: str | Path) -> Config:
     except json.JSONDecodeError as exc:
         raise ConfigError(
             f"{path}: invalid JSON at line {exc.lineno} column {exc.colno}: {exc.msg}"
-        )
+        ) from exc
     config = parse(raw)
     config.source = str(path)
     return config
@@ -414,12 +392,8 @@ def _parse_inputs(section: Section, strip: StripConfig) -> InputsConfig:
 def _parse_output(section: Section) -> OutputConfig:
     output = OutputConfig(
         max_fps=section.number("max_fps", 60.0, minimum=0.1, maximum=1000.0),
-        frame_timeout_ms=section.number(
-            "frame_timeout_ms", 15.0, minimum=1.0, maximum=5000.0
-        ),
-        idle_refresh_hz=section.number(
-            "idle_refresh_hz", 0.0, minimum=0.0, maximum=100.0
-        ),
+        frame_timeout_ms=section.number("frame_timeout_ms", 15.0, minimum=1.0, maximum=5000.0),
+        idle_refresh_hz=section.number("idle_refresh_hz", 0.0, minimum=0.0, maximum=100.0),
         resolve_interval_s=section.number("resolve_interval_s", 300.0, minimum=0.0),
     )
     section.finish()
@@ -440,18 +414,14 @@ def _default_universe_size(fmt: str) -> int:
     return ARTNET_CHANNELS_RGBW if fmt == "rgbw" else ARTNET_CHANNELS_RGB
 
 
-def _parse_targets(
-    entries: list, defaults: dict, strip: StripConfig
-) -> list[TargetConfig]:
+def _parse_targets(entries: list, defaults: dict, strip: StripConfig) -> list[TargetConfig]:
     targets: list[TargetConfig] = []
     names: set[str] = set()
     cursor = 0
 
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
-            raise ConfigError(
-                f"targets[{index}]: expected an object, got {_typename(entry)}"
-            )
+            raise ConfigError(f"targets[{index}]: expected an object, got {_typename(entry)}")
         merged = {**defaults, **entry}
         section = Section(merged, f"targets[{index}]")
 
@@ -473,9 +443,7 @@ def _parse_targets(
             host=host,
             protocol=proto,
             enabled=section.boolean("enabled", True),
-            port=section.integer(
-                "port", DEFAULT_PORTS[proto], minimum=1, maximum=65535
-            ),
+            port=section.integer("port", DEFAULT_PORTS[proto], minimum=1, maximum=65535),
             format=fmt,
             start=start,
             count=count,
@@ -495,9 +463,7 @@ def _parse_targets(
                 minimum=1,
                 maximum=512,
             ),
-            priority=section.integer(
-                "priority", E131_DEFAULT_PRIORITY, minimum=0, maximum=200
-            ),
+            priority=section.integer("priority", E131_DEFAULT_PRIORITY, minimum=0, maximum=200),
             multicast=section.boolean("multicast", False),
             multicast_ttl=section.integer("multicast_ttl", 1, minimum=1, maximum=255),
             source_name=section.string("source_name", "WLED Proxy", lower=False),
@@ -518,9 +484,7 @@ def _parse_targets(
                 f"multiple of {target.channels_per_pixel} for {target.format} pixels"
             )
         if target.multicast and target.protocol != "e131":
-            raise ConfigError(
-                f"{where}: multicast output is only available for the e131 protocol"
-            )
+            raise ConfigError(f"{where}: multicast output is only available for the e131 protocol")
         if len(target.source_name.encode("utf-8")) > 63:
             raise ConfigError(f"{where}: source_name must be at most 63 bytes")
 

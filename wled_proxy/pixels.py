@@ -193,7 +193,7 @@ class PixelMapper:
                 w = bytes(map(max, r, g, b))
             elif mode == "luminance":
                 w = bytes(
-                    (rv * 77 + gv * 150 + bv * 29) >> 8 for rv, gv, bv in zip(r, g, b)
+                    (rv * 77 + gv * 150 + bv * 29) >> 8 for rv, gv, bv in zip(r, g, b, strict=True)
                 )
             else:
                 w = bytes(map(min, r, g, b))
@@ -204,9 +204,7 @@ class PixelMapper:
             channels = {"r": r, "g": g, "b": b, "w": w}
         else:
             w = channels["w"]
-            channels = {
-                name: bytes(map(_add_saturating, channels[name], w)) for name in "rgb"
-            }
+            channels = {name: bytes(map(_add_saturating, channels[name], w)) for name in "rgb"}
 
         out = bytearray(self.byte_count)
         for i, name in enumerate(self.color_order):

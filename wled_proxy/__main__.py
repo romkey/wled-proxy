@@ -36,18 +36,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=config_module.LOG_LEVELS,
         help="override the log level from the config file",
     )
-    parser.add_argument(
-        "--version", action="version", version=f"wled-proxy {__version__}"
-    )
+    parser.add_argument("--version", action="version", version=f"wled-proxy {__version__}")
     return parser.parse_args(argv)
 
 
 def setup_logging(level: str) -> None:
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(
-        logging.Formatter(
-            "%(asctime)s %(levelname)-7s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-        )
+        logging.Formatter("%(asctime)s %(levelname)-7s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     )
     root = logging.getLogger("wled_proxy")
     root.handlers.clear()
@@ -60,10 +56,7 @@ def print_check(config: config_module.Config) -> None:
     strip = config.strip
     targets = config.active_targets
     print(f"config : {config.source}")
-    print(
-        f"strip  : {strip.led_count} pixels, {strip.format.upper()}, "
-        f"{strip.channels} channels"
-    )
+    print(f"strip  : {strip.led_count} pixels, {strip.format.upper()}, {strip.channels} channels")
     enabled_inputs = [
         name
         for name, section in (
@@ -74,10 +67,7 @@ def print_check(config: config_module.Config) -> None:
         if section.enabled
     ]
     print(f"inputs : {', '.join(enabled_inputs) or 'none'}")
-    print(
-        f"targets: {len(targets)} enabled, "
-        f"{len(config.targets) - len(targets)} disabled"
-    )
+    print(f"targets: {len(targets)} enabled, {len(config.targets) - len(targets)} disabled")
     for target in targets:
         print(
             f"  {target.name:<20} {target.start:>6}-{target.end - 1:<6} "
@@ -87,9 +77,7 @@ def print_check(config: config_module.Config) -> None:
     if gaps:
         print(f"warning: no target covers pixels {app.format_runs(gaps)}")
     if overlaps:
-        print(
-            f"note   : more than one target covers pixels {app.format_runs(overlaps)}"
-        )
+        print(f"note   : more than one target covers pixels {app.format_runs(overlaps)}")
 
 
 def main(argv: list[str] | None = None) -> int:

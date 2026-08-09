@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import signal
 import time
@@ -51,9 +52,7 @@ class Proxy:
         await self._start_inputs()
         self._tasks.append(asyncio.create_task(self._render_loop(), name="render"))
         if self.config.output.resolve_interval_s > 0:
-            self._tasks.append(
-                asyncio.create_task(self._resolve_loop(), name="resolve")
-            )
+            self._tasks.append(asyncio.create_task(self._resolve_loop(), name="resolve"))
 
     async def stop(self) -> None:
         self._running = False
@@ -61,10 +60,8 @@ class Proxy:
         for task in self._tasks:
             task.cancel()
         for task in self._tasks:
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
         self._tasks.clear()
         for handler in self.inputs:
             handler.close()
@@ -77,9 +74,7 @@ class Proxy:
             handler = inputs_module.DDPInput(
                 settings.ddp, self.canvas, self._on_write, self._on_commit
             )
-            await inputs_module.start_input(
-                handler, settings.ddp.bind, settings.ddp.port
-            )
+            await inputs_module.start_input(handler, settings.ddp.bind, settings.ddp.port)
             self.inputs.append(handler)
             log.info("listening for DDP on %s:%d", settings.ddp.bind, settings.ddp.port)
 
@@ -87,9 +82,7 @@ class Proxy:
             handler = inputs_module.ArtnetInput(
                 settings.artnet, self.canvas, self._on_write, self._on_commit
             )
-            await inputs_module.start_input(
-                handler, settings.artnet.bind, settings.artnet.port
-            )
+            await inputs_module.start_input(handler, settings.artnet.bind, settings.artnet.port)
             self.inputs.append(handler)
             log.info(
                 "listening for Art-Net on %s:%d, universes %d-%d",
@@ -107,9 +100,7 @@ class Proxy:
             if settings.e131.multicast:
                 groups = [
                     protocol.e131_multicast_group(u)
-                    for u in range(
-                        settings.e131.start_universe, handler.last_universe + 1
-                    )
+                    for u in range(settings.e131.start_universe, handler.last_universe + 1)
                 ]
             await inputs_module.start_input(
                 handler,
@@ -146,9 +137,7 @@ class Proxy:
         output = self.config.output
         min_interval = 1.0 / output.max_fps
         frame_timeout = output.frame_timeout_ms / 1000.0
-        idle_interval = (
-            1.0 / output.idle_refresh_hz if output.idle_refresh_hz > 0 else None
-        )
+        idle_interval = 1.0 / output.idle_refresh_hz if output.idle_refresh_hz > 0 else None
         last_send = 0.0
 
         while self._running:
@@ -281,10 +270,8 @@ async def _wait(event: asyncio.Event, timeout: float | None) -> None:
     if timeout is None:
         await event.wait()
         return
-    try:
+    with contextlib.suppress(asyncio.TimeoutError, TimeoutError):
         await asyncio.wait_for(event.wait(), timeout)
-    except (asyncio.TimeoutError, TimeoutError):
-        pass
 
 
 def format_runs(runs: list[tuple[int, int]], limit: int = 6) -> str:
@@ -302,10 +289,8 @@ async def run(config: Config) -> int:
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop.set)
-    try:
+    with contextlib.suppress(AttributeError, NotImplementedError, ValueError):
         loop.add_signal_handler(signal.SIGHUP, reload_requested.set)
-    except (AttributeError, NotImplementedError, ValueError):
-        pass
 
     status: StatusServer | None = None
     proxy = Proxy(config)
@@ -313,9 +298,7 @@ async def run(config: Config) -> int:
     proxy.log_summary()
 
     if config.status.enabled:
-        status = StatusServer(
-            config.status.bind, config.status.port, lambda: proxy.snapshot()
-        )
+        status = StatusServer(config.status.bind, config.status.port, lambda: proxy.snapshot())
         await status.start()
         log.info("status page on http://%s:%d/", config.status.bind, config.status.port)
 
@@ -325,9 +308,7 @@ async def run(config: Config) -> int:
                 asyncio.create_task(stop.wait()),
                 asyncio.create_task(reload_requested.wait()),
             ]
-            _, pending = await asyncio.wait(
-                waiters, return_when=asyncio.FIRST_COMPLETED
-            )
+            _, pending = await asyncio.wait(waiters, return_when=asyncio.FIRST_COMPLETED)
             for task in pending:
                 task.cancel()
             await asyncio.gather(*pending, return_exceptions=True)
