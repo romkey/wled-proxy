@@ -1,5 +1,10 @@
 # wled-proxy
 
+[![CI](https://github.com/romkey/wled-proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/romkey/wled-proxy/actions/workflows/ci.yml)
+[![Lint](https://github.com/romkey/wled-proxy/actions/workflows/lint.yml/badge.svg)](https://github.com/romkey/wled-proxy/actions/workflows/lint.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
 Present any number of WLED devices as a **single large virtual LED strip**.
 
 WLED can already drive remote strips over the network, but it caps you at ten
@@ -337,7 +342,10 @@ above 1024.
 ## Development
 
 ```bash
-python3 -m pytest
+pip install -e ".[dev]"
+pytest
+ruff check wled_proxy tests
+ruff format --check wled_proxy tests
 ```
 
 The suite covers the three wire formats against the constants WLED uses, the

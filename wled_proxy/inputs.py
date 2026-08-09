@@ -6,7 +6,7 @@ import asyncio
 import logging
 import socket
 import struct
-from typing import Callable
+from collections.abc import Callable
 
 from . import protocol
 from .config import ArtnetInputConfig, DDPInputConfig, E131InputConfig
@@ -26,8 +26,13 @@ class UniverseMap:
     channel 1, with each universe holding a whole number of pixels.
     """
 
-    def __init__(self, start_universe: int, channels_per_universe: int,
-                 dmx_start_channel: int, channels_per_pixel: int):
+    def __init__(
+        self,
+        start_universe: int,
+        channels_per_universe: int,
+        dmx_start_channel: int,
+        channels_per_pixel: int,
+    ):
         self.start_universe = start_universe
         self.channels_per_pixel = channels_per_pixel
         self.dmx_start_channel = dmx_start_channel
@@ -45,7 +50,11 @@ class UniverseMap:
         if index < 0:
             return None
         if index == 0:
-            return 0, self.dmx_start_channel - 1, self.first_universe_leds * self.channels_per_pixel
+            return (
+                0,
+                self.dmx_start_channel - 1,
+                self.first_universe_leds * self.channels_per_pixel,
+            )
         pixel = self.first_universe_leds + (index - 1) * self.leds_per_universe
         offset = pixel * self.channels_per_pixel
         return offset, 0, self.leds_per_universe * self.channels_per_pixel
@@ -63,8 +72,12 @@ class InputBase(asyncio.DatagramProtocol):
 
     protocol_name = "input"
 
-    def __init__(self, canvas: Canvas, on_write: Callable[[], None],
-                 on_commit: Callable[[], None]):
+    def __init__(
+        self,
+        canvas: Canvas,
+        on_write: Callable[[], None],
+        on_commit: Callable[[], None],
+    ):
         self.canvas = canvas
         self._on_write = on_write
         self._on_commit = on_commit
@@ -89,7 +102,12 @@ class InputBase(asyncio.DatagramProtocol):
                 self.rejected += 1
         except Exception:
             self.rejected += 1
-            log.debug("%s input: bad packet from %s", self.protocol_name, addr[0], exc_info=True)
+            log.debug(
+                "%s input: bad packet from %s",
+                self.protocol_name,
+                addr[0],
+                exc_info=True,
+            )
 
     def handle(self, data: memoryview) -> bool:
         raise NotImplementedError
@@ -99,8 +117,12 @@ class InputBase(asyncio.DatagramProtocol):
             self.transport.close()
             self.transport = None
 
-    def _store(self, channel_offset: int, data: memoryview, channels_per_pixel: int) -> None:
-        self.channels_written += self.canvas.write(channel_offset, data, channels_per_pixel)
+    def _store(
+        self, channel_offset: int, data: memoryview, channels_per_pixel: int
+    ) -> None:
+        self.channels_written += self.canvas.write(
+            channel_offset, data, channels_per_pixel
+        )
         self._on_write()
 
     def _commit(self) -> None:
@@ -120,8 +142,11 @@ class DDPInput(InputBase):
         packet = protocol.parse_ddp(data)
         if packet is None:
             return False
-        self._store(self.config.channel_offset + packet.offset,
-                    packet.data, packet.channels_per_pixel)
+        self._store(
+            self.config.channel_offset + packet.offset,
+            packet.data,
+            packet.channels_per_pixel,
+        )
         if packet.push:
             self._commit()
         return True
@@ -134,10 +159,15 @@ class ArtnetInput(InputBase):
         super().__init__(canvas, on_write, on_commit)
         self.config = config
         self.channels_per_pixel = len(config.format)
-        self.universes = UniverseMap(config.start_universe, config.channels_per_universe,
-                                     config.dmx_start_channel, self.channels_per_pixel)
-        self.last_universe = (config.start_universe
-                              + self.universes.universe_count(canvas.led_count) - 1)
+        self.universes = UniverseMap(
+            config.start_universe,
+            config.channels_per_universe,
+            config.dmx_start_channel,
+            self.channels_per_pixel,
+        )
+        self.last_universe = (
+            config.start_universe + self.universes.universe_count(canvas.led_count) - 1
+        )
 
     def handle(self, data: memoryview) -> bool:
         opcode = protocol.artnet_opcode(data)
@@ -156,7 +186,7 @@ class ArtnetInput(InputBase):
         if placement is None:
             return False
         offset, skip, limit = placement
-        self._store(offset, packet.data[skip:skip + limit], self.channels_per_pixel)
+        self._store(offset, packet.data[skip : skip + limit], self.channels_per_pixel)
         if packet.universe >= self.last_universe:
             self._commit()
         return True
@@ -169,8 +199,12 @@ class E131Input(InputBase):
         super().__init__(canvas, on_write, on_commit)
         self.config = config
         self.channels_per_pixel = len(config.format)
-        self.universes = UniverseMap(config.start_universe, config.channels_per_universe,
-                                     config.dmx_start_channel, self.channels_per_pixel)
+        self.universes = UniverseMap(
+            config.start_universe,
+            config.channels_per_universe,
+            config.dmx_start_channel,
+            self.channels_per_pixel,
+        )
         self.universe_count = self.universes.universe_count(canvas.led_count)
         self.last_universe = config.start_universe + self.universe_count - 1
 
@@ -184,7 +218,7 @@ class E131Input(InputBase):
         if placement is None:
             return False
         offset, skip, limit = placement
-        self._store(offset, packet.data[skip:skip + limit], self.channels_per_pixel)
+        self._store(offset, packet.data[skip : skip + limit], self.channels_per_pixel)
         if packet.universe >= self.last_universe:
             self._commit()
         return True
@@ -213,7 +247,9 @@ def join_multicast(sock: socket.socket, groups: list[str], interface: str) -> li
     """Join sACN multicast groups, returning the ones that succeeded."""
     joined, failed = [], []
     for group in groups:
-        request = struct.pack("4s4s", socket.inet_aton(group), socket.inet_aton(interface))
+        request = struct.pack(
+            "4s4s", socket.inet_aton(group), socket.inet_aton(interface)
+        )
         try:
             sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, request)
         except OSError as exc:
@@ -222,23 +258,36 @@ def join_multicast(sock: socket.socket, groups: list[str], interface: str) -> li
         joined.append(group)
     if failed:
         group, exc = failed[0]
-        log.warning("could not join %d of %d sACN multicast groups (first was %s: %s). "
-                    "Linux allows 20 memberships per socket by default; raise "
-                    "net.ipv4.igmp_max_memberships or use unicast sACN instead.",
-                    len(failed), len(groups), group, exc)
+        log.warning(
+            "could not join %d of %d sACN multicast groups (first was %s: %s). "
+            "Linux allows 20 memberships per socket by default; raise "
+            "net.ipv4.igmp_max_memberships or use unicast sACN instead.",
+            len(failed),
+            len(groups),
+            group,
+            exc,
+        )
     return joined
 
 
-async def start_input(handler: InputBase, bind: str, port: int,
-                      multicast_groups: list[str] | None = None,
-                      multicast_interface: str = "0.0.0.0") -> InputBase:
+async def start_input(
+    handler: InputBase,
+    bind: str,
+    port: int,
+    multicast_groups: list[str] | None = None,
+    multicast_interface: str = "0.0.0.0",
+) -> InputBase:
     """Bind a socket and attach ``handler`` to it."""
     sock = _make_socket(bind, port)
     if multicast_groups:
         joined = join_multicast(sock, multicast_groups, multicast_interface)
         if joined:
-            log.info("joined %d sACN multicast group(s), %s - %s",
-                     len(joined), joined[0], joined[-1])
+            log.info(
+                "joined %d sACN multicast group(s), %s - %s",
+                len(joined),
+                joined[0],
+                joined[-1],
+            )
     loop = asyncio.get_running_loop()
     await loop.create_datagram_endpoint(lambda: handler, sock=sock)
     return handler

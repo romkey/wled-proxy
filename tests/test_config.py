@@ -36,21 +36,27 @@ def test_defaults():
 
 
 def test_targets_chain_automatically_when_start_is_omitted():
-    config = parse(base(targets=[
-        {"host": "a", "count": 30},
-        {"host": "b", "count": 20},
-        {"host": "c", "count": 10, "start": 0},
-        {"host": "d", "count": 5},
-    ]))
+    config = parse(
+        base(
+            targets=[
+                {"host": "a", "count": 30},
+                {"host": "b", "count": 20},
+                {"host": "c", "count": 10, "start": 0},
+                {"host": "d", "count": 5},
+            ]
+        )
+    )
     spans = [(t.name, t.start, t.end) for t in config.targets]
     assert spans == [("a", 0, 30), ("b", 30, 50), ("c", 0, 10), ("d", 10, 15)]
 
 
 def test_target_defaults_are_merged_into_every_target():
-    config = parse(base(
-        target_defaults={"protocol": "artnet", "format": "rgbw", "count": 25},
-        targets=[{"host": "a"}, {"host": "b", "protocol": "ddp"}],
-    ))
+    config = parse(
+        base(
+            target_defaults={"protocol": "artnet", "format": "rgbw", "count": 25},
+            targets=[{"host": "a"}, {"host": "b", "protocol": "ddp"}],
+        )
+    )
     assert [t.protocol for t in config.targets] == ["artnet", "ddp"]
     assert all(t.format == "rgbw" and t.count == 25 for t in config.targets)
     assert config.targets[0].port == 6454
@@ -58,31 +64,53 @@ def test_target_defaults_are_merged_into_every_target():
 
 
 def test_default_universe_size_follows_the_pixel_format():
-    config = parse(base(targets=[
-        {"host": "a", "count": 10, "protocol": "artnet"},
-        {"host": "b", "count": 10, "protocol": "artnet", "format": "rgbw"},
-    ]))
+    config = parse(
+        base(
+            targets=[
+                {"host": "a", "count": 10, "protocol": "artnet"},
+                {"host": "b", "count": 10, "protocol": "artnet", "format": "rgbw"},
+            ]
+        )
+    )
     assert config.targets[0].channels_per_universe == 510
     assert config.targets[1].channels_per_universe == 512
     assert config.targets[0].universe == 0
 
 
-@pytest.mark.parametrize("document,message", [
-    (base(targets=[{"host": "a", "count": 50, "start": 60}]), "virtual strip is only"),
-    (base(targets=[{"host": "a", "count": 0}]), "at least 1"),
-    (base(targets=[{"host": "a", "count": 10, "protocol": "sacn"}]), "not one of"),
-    (base(targets=[{"host": "a", "count": 10, "colour_order": "grb"}]), "unknown option"),
-    (base(targets=[{"count": 10}]), "host is required"),
-    (base(targets=[{"host": "a", "count": 10, "color_order": "xyz"}]), "not one of"),
-    (base(targets=[{"host": "a", "count": 10}, {"host": "a", "count": 10}]), "duplicate name"),
-    (base(virtual_strip={"led_count": 100, "format": "rgbww"}), "not one of"),
-    (base(virtual_strip={}), "led_count is required"),
-    (base(unexpected=1), "unknown option"),
-    (base(targets=[{"host": "a", "count": 10, "brightness": 4}]), "at most 1"),
-    (base(targets=[{"host": "a", "count": 10, "enabled": "yes"}]), "expected true or false"),
-    (base(targets=[{"host": "a", "count": "10"}]), "expected an integer"),
-    ({"virtual_strip": {"led_count": 10}, "targets": {}}, "expected a list"),
-])
+@pytest.mark.parametrize(
+    "document,message",
+    [
+        (
+            base(targets=[{"host": "a", "count": 50, "start": 60}]),
+            "virtual strip is only",
+        ),
+        (base(targets=[{"host": "a", "count": 0}]), "at least 1"),
+        (base(targets=[{"host": "a", "count": 10, "protocol": "sacn"}]), "not one of"),
+        (
+            base(targets=[{"host": "a", "count": 10, "colour_order": "grb"}]),
+            "unknown option",
+        ),
+        (base(targets=[{"count": 10}]), "host is required"),
+        (
+            base(targets=[{"host": "a", "count": 10, "color_order": "xyz"}]),
+            "not one of",
+        ),
+        (
+            base(targets=[{"host": "a", "count": 10}, {"host": "a", "count": 10}]),
+            "duplicate name",
+        ),
+        (base(virtual_strip={"led_count": 100, "format": "rgbww"}), "not one of"),
+        (base(virtual_strip={}), "led_count is required"),
+        (base(unexpected=1), "unknown option"),
+        (base(targets=[{"host": "a", "count": 10, "brightness": 4}]), "at most 1"),
+        (
+            base(targets=[{"host": "a", "count": 10, "enabled": "yes"}]),
+            "expected true or false",
+        ),
+        (base(targets=[{"host": "a", "count": "10"}]), "expected an integer"),
+        ({"virtual_strip": {"led_count": 10}, "targets": {}}, "expected a list"),
+    ],
+)
 def test_rejects_bad_configuration(document, message):
     with pytest.raises(ConfigError) as error:
         parse(document)
@@ -93,13 +121,27 @@ def test_multicast_output_is_rejected_for_non_sacn_targets():
     with pytest.raises(ConfigError) as error:
         parse(base(targets=[{"host": "a", "count": 10, "multicast": True}]))
     assert "only available for the e131 protocol" in str(error.value)
-    parse(base(targets=[{"host": "a", "count": 10, "protocol": "e131", "multicast": True}]))
+    parse(
+        base(
+            targets=[{"host": "a", "count": 10, "protocol": "e131", "multicast": True}]
+        )
+    )
 
 
 def test_artnet_universe_size_must_hold_whole_pixels():
     with pytest.raises(ConfigError) as error:
-        parse(base(targets=[{"host": "a", "count": 10, "protocol": "artnet",
-                             "channels_per_universe": 500}]))
+        parse(
+            base(
+                targets=[
+                    {
+                        "host": "a",
+                        "count": 10,
+                        "protocol": "artnet",
+                        "channels_per_universe": 500,
+                    }
+                ]
+            )
+        )
     assert "multiple of 3" in str(error.value)
 
 
@@ -122,7 +164,7 @@ def test_load_reads_a_file_with_comments(tmp_path):
 
 def test_comment_stripping_preserves_line_numbers(tmp_path):
     path = tmp_path / "config.json"
-    path.write_text("// one\n// two\n{\n  \"virtual_strip\": [\n}\n")
+    path.write_text('// one\n// two\n{\n  "virtual_strip": [\n}\n')
     with pytest.raises(ConfigError) as error:
         config_module.load(path)
     assert "line 5" in str(error.value)
@@ -139,18 +181,22 @@ def test_all_shipped_configs_are_valid():
 
 def test_load_reports_invalid_json(tmp_path):
     path = tmp_path / "config.json"
-    path.write_text("{\n  \"virtual_strip\": {,}\n}")
+    path.write_text('{\n  "virtual_strip": {,}\n}')
     with pytest.raises(ConfigError) as error:
         config_module.load(path)
     assert "invalid JSON at line" in str(error.value)
 
 
 def test_coverage_finds_gaps_and_overlaps():
-    config = parse(base(targets=[
-        {"host": "a", "count": 10, "start": 0},
-        {"host": "b", "count": 10, "start": 5},
-        {"host": "c", "count": 10, "start": 90},
-    ]))
+    config = parse(
+        base(
+            targets=[
+                {"host": "a", "count": 10, "start": 0},
+                {"host": "b", "count": 10, "start": 5},
+                {"host": "c", "count": 10, "start": 90},
+            ]
+        )
+    )
     gaps, overlaps = describe_coverage(100, config.active_targets)
     assert gaps == [(15, 89)]
     assert overlaps == [(5, 9)]

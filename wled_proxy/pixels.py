@@ -71,9 +71,9 @@ class Canvas:
         if pixels <= 0:
             return 0
 
-        src = memoryview(data)[skip:skip + pixels * source_channels]
+        src = memoryview(data)[skip : skip + pixels * source_channels]
         start = pixel * cpp
-        dst = self.view[start:start + pixels * cpp]
+        dst = self.view[start : start + pixels * cpp]
         for i in range(min(source_channels, cpp)):
             dst[i::cpp] = src[i::source_channels].tobytes()
         if cpp > source_channels:
@@ -94,7 +94,7 @@ def build_lut(brightness: float = 1.0, gamma: float = 1.0) -> bytes | None:
 
 def _add_saturating(a: int, b: int) -> int:
     total = a + b
-    return 255 if total > 255 else total
+    return min(total, 255)
 
 
 class PixelMapper:
@@ -170,20 +170,20 @@ class PixelMapper:
     def render(self, view: memoryview) -> bytes | bytearray:
         """Render this target's pixels from a canvas memoryview."""
         if self._identity:
-            out = view[self._first:self._last].tobytes()
+            out = view[self._first : self._last].tobytes()
         elif self._gather is not None:
             scratch = self._scratch
-            scratch[:-1] = view[self._first:self._last]
+            scratch[:-1] = view[self._first : self._last]
             out = bytes(self._gather(scratch))
         else:
             out = self._render_arithmetic(view)
         return out.translate(self._lut) if self._lut is not None else out
 
     def _render_arithmetic(self, view: memoryview) -> bytearray:
-        src = view[self._first:self._last]
+        src = view[self._first : self._last]
         channels = {}
         for i, name in enumerate(self.source_format):
-            plane = src[i::self.src_cpp].tobytes()
+            plane = src[i :: self.src_cpp].tobytes()
             channels[name] = plane[::-1] if self.reverse else plane
 
         if self.src_cpp == 3:
@@ -192,7 +192,9 @@ class PixelMapper:
             if mode == "max":
                 w = bytes(map(max, r, g, b))
             elif mode == "luminance":
-                w = bytes((rv * 77 + gv * 150 + bv * 29) >> 8 for rv, gv, bv in zip(r, g, b))
+                w = bytes(
+                    (rv * 77 + gv * 150 + bv * 29) >> 8 for rv, gv, bv in zip(r, g, b)
+                )
             else:
                 w = bytes(map(min, r, g, b))
                 if mode == "accurate":
@@ -203,11 +205,10 @@ class PixelMapper:
         else:
             w = channels["w"]
             channels = {
-                name: bytes(map(_add_saturating, channels[name], w))
-                for name in "rgb"
+                name: bytes(map(_add_saturating, channels[name], w)) for name in "rgb"
             }
 
         out = bytearray(self.byte_count)
         for i, name in enumerate(self.color_order):
-            out[i::self.dst_cpp] = channels[name]
+            out[i :: self.dst_cpp] = channels[name]
         return out

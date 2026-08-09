@@ -9,7 +9,8 @@ import time
 
 from . import inputs as inputs_module
 from . import protocol
-from .config import Config, ConfigError, load as load_config
+from .config import Config, ConfigError
+from .config import load as load_config
 from .metrics import RateCounter
 from .outputs import Router, describe_coverage
 from .pixels import Canvas
@@ -50,7 +51,9 @@ class Proxy:
         await self._start_inputs()
         self._tasks.append(asyncio.create_task(self._render_loop(), name="render"))
         if self.config.output.resolve_interval_s > 0:
-            self._tasks.append(asyncio.create_task(self._resolve_loop(), name="resolve"))
+            self._tasks.append(
+                asyncio.create_task(self._resolve_loop(), name="resolve")
+            )
 
     async def stop(self) -> None:
         self._running = False
@@ -72,35 +75,57 @@ class Proxy:
         settings = self.config.inputs
         if settings.ddp.enabled:
             handler = inputs_module.DDPInput(
-                settings.ddp, self.canvas, self._on_write, self._on_commit)
-            await inputs_module.start_input(handler, settings.ddp.bind, settings.ddp.port)
+                settings.ddp, self.canvas, self._on_write, self._on_commit
+            )
+            await inputs_module.start_input(
+                handler, settings.ddp.bind, settings.ddp.port
+            )
             self.inputs.append(handler)
             log.info("listening for DDP on %s:%d", settings.ddp.bind, settings.ddp.port)
 
         if settings.artnet.enabled:
             handler = inputs_module.ArtnetInput(
-                settings.artnet, self.canvas, self._on_write, self._on_commit)
-            await inputs_module.start_input(handler, settings.artnet.bind, settings.artnet.port)
+                settings.artnet, self.canvas, self._on_write, self._on_commit
+            )
+            await inputs_module.start_input(
+                handler, settings.artnet.bind, settings.artnet.port
+            )
             self.inputs.append(handler)
-            log.info("listening for Art-Net on %s:%d, universes %d-%d",
-                     settings.artnet.bind, settings.artnet.port,
-                     settings.artnet.start_universe, handler.last_universe)
+            log.info(
+                "listening for Art-Net on %s:%d, universes %d-%d",
+                settings.artnet.bind,
+                settings.artnet.port,
+                settings.artnet.start_universe,
+                handler.last_universe,
+            )
 
         if settings.e131.enabled:
             handler = inputs_module.E131Input(
-                settings.e131, self.canvas, self._on_write, self._on_commit)
+                settings.e131, self.canvas, self._on_write, self._on_commit
+            )
             groups = []
             if settings.e131.multicast:
-                groups = [protocol.e131_multicast_group(u)
-                          for u in range(settings.e131.start_universe,
-                                         handler.last_universe + 1)]
+                groups = [
+                    protocol.e131_multicast_group(u)
+                    for u in range(
+                        settings.e131.start_universe, handler.last_universe + 1
+                    )
+                ]
             await inputs_module.start_input(
-                handler, settings.e131.bind, settings.e131.port,
-                groups, settings.e131.multicast_interface)
+                handler,
+                settings.e131.bind,
+                settings.e131.port,
+                groups,
+                settings.e131.multicast_interface,
+            )
             self.inputs.append(handler)
-            log.info("listening for E1.31 on %s:%d, universes %d-%d",
-                     settings.e131.bind, settings.e131.port,
-                     settings.e131.start_universe, handler.last_universe)
+            log.info(
+                "listening for E1.31 on %s:%d, universes %d-%d",
+                settings.e131.bind,
+                settings.e131.port,
+                settings.e131.start_universe,
+                handler.last_universe,
+            )
 
         if not self.inputs:
             log.warning("no inputs are enabled, the virtual strip will stay dark")
@@ -121,7 +146,9 @@ class Proxy:
         output = self.config.output
         min_interval = 1.0 / output.max_fps
         frame_timeout = output.frame_timeout_ms / 1000.0
-        idle_interval = 1.0 / output.idle_refresh_hz if output.idle_refresh_hz > 0 else None
+        idle_interval = (
+            1.0 / output.idle_refresh_hz if output.idle_refresh_hz > 0 else None
+        )
         last_send = 0.0
 
         while self._running:
@@ -161,22 +188,36 @@ class Proxy:
         strip = self.config.strip
         targets = self.config.active_targets
         disabled = len(self.config.targets) - len(targets)
-        log.info("virtual strip: %d pixels (%s), %d bytes",
-                 strip.led_count, strip.format.upper(), strip.channels)
-        log.info("%d target(s) enabled%s, %d packets per frame",
-                 len(targets),
-                 f", {disabled} disabled" if disabled else "",
-                 self.router.packets_per_frame)
+        log.info(
+            "virtual strip: %d pixels (%s), %d bytes",
+            strip.led_count,
+            strip.format.upper(),
+            strip.channels,
+        )
+        log.info(
+            "%d target(s) enabled%s, %d packets per frame",
+            len(targets),
+            f", {disabled} disabled" if disabled else "",
+            self.router.packets_per_frame,
+        )
         for target in self.router.targets:
             cfg = target.config
             extra = ""
             if cfg.protocol in ("artnet", "e131"):
                 last = cfg.universe + target.packets_per_frame - 1
                 extra = f", universes {cfg.universe}-{last}"
-            log.info("  %-20s %5d-%-5d -> %s:%d %s/%s%s%s",
-                     cfg.name, cfg.start, cfg.end - 1, cfg.host, cfg.port,
-                     cfg.protocol, cfg.format, extra,
-                     " (reversed)" if cfg.reverse else "")
+            log.info(
+                "  %-20s %5d-%-5d -> %s:%d %s/%s%s%s",
+                cfg.name,
+                cfg.start,
+                cfg.end - 1,
+                cfg.host,
+                cfg.port,
+                cfg.protocol,
+                cfg.format,
+                extra,
+                " (reversed)" if cfg.reverse else "",
+            )
 
         gaps, overlaps = describe_coverage(strip.led_count, targets)
         if gaps:
@@ -272,15 +313,21 @@ async def run(config: Config) -> int:
     proxy.log_summary()
 
     if config.status.enabled:
-        status = StatusServer(config.status.bind, config.status.port, lambda: proxy.snapshot())
+        status = StatusServer(
+            config.status.bind, config.status.port, lambda: proxy.snapshot()
+        )
         await status.start()
         log.info("status page on http://%s:%d/", config.status.bind, config.status.port)
 
     try:
         while True:
-            waiters = [asyncio.create_task(stop.wait()),
-                       asyncio.create_task(reload_requested.wait())]
-            _, pending = await asyncio.wait(waiters, return_when=asyncio.FIRST_COMPLETED)
+            waiters = [
+                asyncio.create_task(stop.wait()),
+                asyncio.create_task(reload_requested.wait()),
+            ]
+            _, pending = await asyncio.wait(
+                waiters, return_when=asyncio.FIRST_COMPLETED
+            )
             for task in pending:
                 task.cancel()
             await asyncio.gather(*pending, return_exceptions=True)

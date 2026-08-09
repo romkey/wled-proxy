@@ -8,11 +8,16 @@ version = "1.0.0"
 description = "Present any number of WLED devices as a single large virtual LED strip"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
 dependencies = []
 classifiers = [
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Topic :: System :: Networking",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.9"]
 
 [project.scripts]
 wled-proxy = "wled_proxy.__main__:main"
@@ -24,3 +29,10 @@ packages = ["wled_proxy"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

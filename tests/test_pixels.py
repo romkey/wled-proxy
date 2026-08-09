@@ -67,25 +67,36 @@ def test_rgb_source_to_rgbw_target_defaults_to_a_dark_white_channel():
     assert mapper.render(canvas.view) == bytes([10, 20, 30, 0, 40, 50, 60, 0])
 
 
-@pytest.mark.parametrize("mode,expected", [
-    ("brighter", bytes([90, 40, 60, 40])),
-    ("accurate", bytes([50, 0, 20, 40])),
-    ("max", bytes([90, 40, 60, 90])),
-    ("luminance", bytes([90, 40, 60, 57])),
-])
+@pytest.mark.parametrize(
+    "mode,expected",
+    [
+        ("brighter", bytes([90, 40, 60, 40])),
+        ("accurate", bytes([50, 0, 20, 40])),
+        ("max", bytes([90, 40, 60, 90])),
+        ("luminance", bytes([90, 40, 60, 57])),
+    ],
+)
 def test_white_modes(mode, expected):
     canvas = Canvas(1, "rgb")
     canvas.buffer[:] = bytes([90, 40, 60])
-    mapper = PixelMapper(source_format="rgb", start=0, count=1,
-                         target_format="rgbw", white_mode=mode)
+    mapper = PixelMapper(
+        source_format="rgb", start=0, count=1, target_format="rgbw", white_mode=mode
+    )
     assert mapper.render(canvas.view) == expected
 
 
 def test_white_mode_respects_reverse_and_color_order():
     canvas = Canvas(2, "rgb")
     canvas.buffer[:] = bytes([90, 40, 60, 10, 20, 30])
-    mapper = PixelMapper(source_format="rgb", start=0, count=2, reverse=True,
-                         target_format="rgbw", color_order="grbw", white_mode="brighter")
+    mapper = PixelMapper(
+        source_format="rgb",
+        start=0,
+        count=2,
+        reverse=True,
+        target_format="rgbw",
+        color_order="grbw",
+        white_mode="brighter",
+    )
     assert mapper.render(canvas.view) == bytes([20, 10, 30, 10, 40, 90, 60, 40])
 
 
@@ -99,8 +110,9 @@ def test_rgbw_source_to_rgb_target_adds_white_with_saturation():
 def test_rgbw_source_to_rgb_target_can_drop_white():
     canvas = Canvas(1, "rgbw")
     canvas.buffer[:] = bytes([10, 20, 30, 200])
-    mapper = PixelMapper(source_format="rgbw", start=0, count=1,
-                         target_format="rgb", white_merge="drop")
+    mapper = PixelMapper(
+        source_format="rgbw", start=0, count=1, target_format="rgb", white_merge="drop"
+    )
     assert mapper.render(canvas.view) == bytes([10, 20, 30])
 
 
@@ -127,10 +139,11 @@ def test_large_mapping_matches_a_naive_implementation():
     count = 1500
     canvas = Canvas(count, "rgb")
     canvas.buffer[:] = bytes((i * 7) % 256 for i in range(count * 3))
-    mapper = PixelMapper(source_format="rgb", start=100, count=1000,
-                         reverse=True, color_order="bgr")
+    mapper = PixelMapper(
+        source_format="rgb", start=100, count=1000, reverse=True, color_order="bgr"
+    )
     expected = bytearray()
     for i in reversed(range(100, 1100)):
-        r, g, b = canvas.buffer[i * 3:i * 3 + 3]
+        r, g, b = canvas.buffer[i * 3 : i * 3 + 3]
         expected += bytes([b, g, r])
     assert mapper.render(canvas.view) == bytes(expected)

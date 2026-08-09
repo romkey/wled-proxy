@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 log = logging.getLogger(__name__)
 
@@ -149,7 +149,9 @@ class StatusServer:
         await self._server.wait_closed()
         self._server = None
 
-    async def _handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def _handle(
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> None:
         try:
             request = await asyncio.wait_for(reader.readline(), timeout=5.0)
             if not request or len(request) > MAX_REQUEST_BYTES:
@@ -165,10 +167,17 @@ class StatusServer:
                     break
 
             if method not in ("GET", "HEAD"):
-                await self._respond(writer, 405, "text/plain", b"method not allowed", method)
+                await self._respond(
+                    writer, 405, "text/plain", b"method not allowed", method
+                )
             elif path in ("/", "/index.html"):
-                await self._respond(writer, 200, "text/html; charset=utf-8",
-                                    PAGE.encode("utf-8"), method)
+                await self._respond(
+                    writer,
+                    200,
+                    "text/html; charset=utf-8",
+                    PAGE.encode("utf-8"),
+                    method,
+                )
             elif path in ("/status.json", "/status", "/api/status"):
                 body = json.dumps(self.provider(), indent=1).encode("utf-8")
                 await self._respond(writer, 200, "application/json", body, method)
@@ -187,8 +196,14 @@ class StatusServer:
             except (ConnectionError, OSError):
                 pass
 
-    async def _respond(self, writer: asyncio.StreamWriter, code: int,
-                       content_type: str, body: bytes, method: str) -> None:
+    async def _respond(
+        self,
+        writer: asyncio.StreamWriter,
+        code: int,
+        content_type: str,
+        body: bytes,
+        method: str,
+    ) -> None:
         reason = {200: "OK", 404: "Not Found", 405: "Method Not Allowed"}[code]
         head = (
             f"HTTP/1.1 {code} {reason}\r\n"

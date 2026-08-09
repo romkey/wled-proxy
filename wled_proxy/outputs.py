@@ -7,7 +7,7 @@ import hashlib
 import logging
 import socket
 import time
-from typing import Iterator
+from collections.abc import Iterator
 
 from . import protocol
 from .config import TargetConfig
@@ -56,8 +56,11 @@ class Target:
     @property
     def packets_per_frame(self) -> int:
         payload = self.config.count * self.channels_per_pixel
-        chunk = (protocol.DDP_MAX_DATA_LEN if self.config.protocol == "ddp"
-                 else self.config.channels_per_universe)
+        chunk = (
+            protocol.DDP_MAX_DATA_LEN
+            if self.config.protocol == "ddp"
+            else self.config.channels_per_universe
+        )
         return max(1, -(-payload // chunk))
 
     def open(self) -> None:
@@ -68,8 +71,9 @@ class Target:
         except OSError:
             pass
         if self.config.multicast:
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL,
-                            self.config.multicast_ttl)
+            sock.setsockopt(
+                socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.config.multicast_ttl
+            )
         self._sock = sock
 
     def close(self) -> None:
@@ -86,8 +90,11 @@ class Target:
         loop = asyncio.get_running_loop()
         try:
             infos = await loop.getaddrinfo(
-                self.config.host, self.config.port,
-                family=socket.AF_INET, type=socket.SOCK_DGRAM)
+                self.config.host,
+                self.config.port,
+                family=socket.AF_INET,
+                type=socket.SOCK_DGRAM,
+            )
         except OSError as exc:
             self._note_error(f"cannot resolve {self.config.host}: {exc}")
             return False
@@ -143,11 +150,13 @@ class Target:
         total = len(payload)
         position = 0
         while position < total:
-            chunk = payload[position:position + protocol.DDP_MAX_DATA_LEN]
+            chunk = payload[position : position + protocol.DDP_MAX_DATA_LEN]
             self._sequence = self._sequence % 15 + 1
             packet = protocol.build_ddp(
-                base + position, bytes(chunk),
-                rgbw=rgbw, sequence=self._sequence,
+                base + position,
+                bytes(chunk),
+                rgbw=rgbw,
+                sequence=self._sequence,
                 push=position + len(chunk) >= total,
             )
             position += len(chunk)
@@ -159,8 +168,10 @@ class Target:
         universe = self.config.universe
         for position in range(0, len(payload), size):
             packet = protocol.build_artnet_dmx(
-                universe, bytes(payload[position:position + size]),
-                sequence=self._sequence)
+                universe,
+                bytes(payload[position : position + size]),
+                sequence=self._sequence,
+            )
             universe += 1
             yield self.address, packet
 
@@ -171,21 +182,25 @@ class Target:
             sequence = (self._universe_sequences.get(universe, 0) + 1) & 0xFF
             self._universe_sequences[universe] = sequence
             packet = protocol.build_e131(
-                universe, bytes(payload[position:position + size]),
+                universe,
+                bytes(payload[position : position + size]),
                 sequence=sequence,
                 cid=self._cid,
                 source_name=self._source_name,
                 priority=self.config.priority,
             )
-            destination = ((protocol.e131_multicast_group(universe), self.config.port)
-                           if self.config.multicast else self.address)
+            destination = (
+                (protocol.e131_multicast_group(universe), self.config.port)
+                if self.config.multicast
+                else self.address
+            )
             universe += 1
             yield destination, packet
 
 
 def _stable_cid(name: str) -> bytes:
     """A deterministic RFC 4122 style CID so restarts keep the same identity."""
-    digest = bytearray(hashlib.sha1(f"wled-proxy/{name}".encode("utf-8")).digest()[:16])
+    digest = bytearray(hashlib.sha1(f"wled-proxy/{name}".encode()).digest()[:16])
     digest[6] = (digest[6] & 0x0F) | 0x50
     digest[8] = (digest[8] & 0x3F) | 0x80
     return bytes(digest)
@@ -200,7 +215,7 @@ class Router:
         self.frames = RateCounter()
 
     @classmethod
-    def build(cls, canvas: Canvas, configs: list[TargetConfig]) -> "Router":
+    def build(cls, canvas: Canvas, configs: list[TargetConfig]) -> Router:
         return cls(canvas, [Target(cfg, canvas) for cfg in configs if cfg.enabled])
 
     def open(self) -> None:
@@ -225,7 +240,9 @@ class Router:
         return sum(t.packets_per_frame for t in self.targets)
 
 
-def describe_coverage(led_count: int, targets: list[TargetConfig]) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+def describe_coverage(
+    led_count: int, targets: list[TargetConfig]
+) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
     """Ranges of the virtual strip that no target covers, and those covered more than once."""
     counts = bytearray(led_count)
     for target in targets:
@@ -237,7 +254,9 @@ def describe_coverage(led_count: int, targets: list[TargetConfig]) -> tuple[list
 _INCREMENT = bytes(min(255, i + 1) for i in range(256))
 
 
-def _runs(counts: bytearray, value: int, at_least: bool = False) -> list[tuple[int, int]]:
+def _runs(
+    counts: bytearray, value: int, at_least: bool = False
+) -> list[tuple[int, int]]:
     runs = []
     start = None
     for i, count in enumerate(counts):

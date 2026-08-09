@@ -13,9 +13,11 @@ from wled_proxy.status import StatusServer
 
 def async_test(func):
     """Run an async test without pulling in an asyncio pytest plugin."""
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return asyncio.run(func(*args, **kwargs))
+
     return wrapper
 
 
@@ -55,11 +57,17 @@ def ramp(count):
 def send_ddp_frame(port, frame):
     sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     for offset in range(0, len(frame), protocol.DDP_MAX_DATA_LEN):
-        chunk = frame[offset:offset + protocol.DDP_MAX_DATA_LEN]
+        chunk = frame[offset : offset + protocol.DDP_MAX_DATA_LEN]
         sender.sendto(
-            protocol.build_ddp(offset, chunk, rgbw=False, sequence=1,
-                               push=offset + len(chunk) >= len(frame)),
-            ("127.0.0.1", port))
+            protocol.build_ddp(
+                offset,
+                chunk,
+                rgbw=False,
+                sequence=1,
+                push=offset + len(chunk) >= len(frame),
+            ),
+            ("127.0.0.1", port),
+        )
     sender.close()
 
 
@@ -67,16 +75,25 @@ def send_ddp_frame(port, frame):
 async def test_ddp_in_splits_across_three_ddp_targets():
     devices = [FakeDevice() for _ in range(3)]
     input_port = free_port()
-    proxy = Proxy(parse({
-        "virtual_strip": {"led_count": 300},
-        "inputs": {"ddp": {"port": input_port}},
-        "status": {"enabled": False},
-        "output": {"max_fps": 1000},
-        "targets": [
-            {"name": f"d{i}", "host": "127.0.0.1", "port": device.port, "count": 100}
-            for i, device in enumerate(devices)
-        ],
-    }))
+    proxy = Proxy(
+        parse(
+            {
+                "virtual_strip": {"led_count": 300},
+                "inputs": {"ddp": {"port": input_port}},
+                "status": {"enabled": False},
+                "output": {"max_fps": 1000},
+                "targets": [
+                    {
+                        "name": f"d{i}",
+                        "host": "127.0.0.1",
+                        "port": device.port,
+                        "count": 100,
+                    }
+                    for i, device in enumerate(devices)
+                ],
+            }
+        )
+    )
     await proxy.start()
     frame = ramp(300)
     try:
@@ -87,7 +104,7 @@ async def test_ddp_in_splits_across_three_ddp_targets():
             parsed = protocol.parse_ddp(packets[0])
             assert parsed.push is True
             assert parsed.offset == 0
-            assert bytes(parsed.data) == frame[index * 300:(index + 1) * 300]
+            assert bytes(parsed.data) == frame[index * 300 : (index + 1) * 300]
     finally:
         await proxy.stop()
         for device in devices:
@@ -98,19 +115,37 @@ async def test_ddp_in_splits_across_three_ddp_targets():
 async def test_ddp_in_artnet_and_e131_out():
     art, sacn = FakeDevice(), FakeDevice()
     input_port = free_port()
-    proxy = Proxy(parse({
-        "virtual_strip": {"led_count": 400},
-        "inputs": {"ddp": {"port": input_port}},
-        "status": {"enabled": False},
-        "output": {"max_fps": 1000},
-        "targets": [
-            {"name": "art", "host": "127.0.0.1", "port": art.port,
-             "protocol": "artnet", "count": 200, "start": 0, "universe": 0},
-            {"name": "sacn", "host": "127.0.0.1", "port": sacn.port,
-             "protocol": "e131", "count": 200, "start": 200, "universe": 1,
-             "reverse": True},
-        ],
-    }))
+    proxy = Proxy(
+        parse(
+            {
+                "virtual_strip": {"led_count": 400},
+                "inputs": {"ddp": {"port": input_port}},
+                "status": {"enabled": False},
+                "output": {"max_fps": 1000},
+                "targets": [
+                    {
+                        "name": "art",
+                        "host": "127.0.0.1",
+                        "port": art.port,
+                        "protocol": "artnet",
+                        "count": 200,
+                        "start": 0,
+                        "universe": 0,
+                    },
+                    {
+                        "name": "sacn",
+                        "host": "127.0.0.1",
+                        "port": sacn.port,
+                        "protocol": "e131",
+                        "count": 200,
+                        "start": 200,
+                        "universe": 1,
+                        "reverse": True,
+                    },
+                ],
+            }
+        )
+    )
     await proxy.start()
     frame = ramp(400)
     try:
@@ -128,7 +163,7 @@ async def test_ddp_in_artnet_and_e131_out():
         first, second = (protocol.parse_e131(p) for p in packets)
         assert (first.universe, second.universe) == (1, 2)
         assert first.priority == 100
-        expected = b"".join(frame[i * 3:i * 3 + 3] for i in reversed(range(200, 400)))
+        expected = b"".join(frame[i * 3 : i * 3 + 3] for i in reversed(range(200, 400)))
         assert bytes(first.data) + bytes(second.data) == expected
     finally:
         await proxy.stop()
@@ -140,20 +175,40 @@ async def test_ddp_in_artnet_and_e131_out():
 async def test_artnet_in_fans_out_to_an_rgbw_target():
     device = FakeDevice()
     input_port = free_port()
-    proxy = Proxy(parse({
-        "virtual_strip": {"led_count": 170},
-        "inputs": {"ddp": {"enabled": False},
-                   "artnet": {"enabled": True, "port": input_port, "start_universe": 0}},
-        "status": {"enabled": False},
-        "output": {"max_fps": 1000},
-        "targets": [{"name": "w", "host": "127.0.0.1", "port": device.port,
-                     "count": 170, "format": "rgbw", "white_mode": "brighter"}],
-    }))
+    proxy = Proxy(
+        parse(
+            {
+                "virtual_strip": {"led_count": 170},
+                "inputs": {
+                    "ddp": {"enabled": False},
+                    "artnet": {
+                        "enabled": True,
+                        "port": input_port,
+                        "start_universe": 0,
+                    },
+                },
+                "status": {"enabled": False},
+                "output": {"max_fps": 1000},
+                "targets": [
+                    {
+                        "name": "w",
+                        "host": "127.0.0.1",
+                        "port": device.port,
+                        "count": 170,
+                        "format": "rgbw",
+                        "white_mode": "brighter",
+                    }
+                ],
+            }
+        )
+    )
     await proxy.start()
     try:
         sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sender.sendto(protocol.build_artnet_dmx(0, bytes((90, 40, 60)) * 170, sequence=1),
-                      ("127.0.0.1", input_port))
+        sender.sendto(
+            protocol.build_artnet_dmx(0, bytes((90, 40, 60)) * 170, sequence=1),
+            ("127.0.0.1", input_port),
+        )
         sender.close()
 
         packets = await device.collect()
@@ -170,18 +225,26 @@ async def test_artnet_in_fans_out_to_an_rgbw_target():
 async def test_frame_timeout_sends_even_without_a_push():
     device = FakeDevice()
     input_port = free_port()
-    proxy = Proxy(parse({
-        "virtual_strip": {"led_count": 10},
-        "inputs": {"ddp": {"port": input_port}},
-        "status": {"enabled": False},
-        "output": {"max_fps": 1000, "frame_timeout_ms": 20},
-        "targets": [{"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}],
-    }))
+    proxy = Proxy(
+        parse(
+            {
+                "virtual_strip": {"led_count": 10},
+                "inputs": {"ddp": {"port": input_port}},
+                "status": {"enabled": False},
+                "output": {"max_fps": 1000, "frame_timeout_ms": 20},
+                "targets": [
+                    {"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}
+                ],
+            }
+        )
+    )
     await proxy.start()
     try:
         sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sender.sendto(protocol.build_ddp(0, b"\x07" * 30, rgbw=False, sequence=1, push=False),
-                      ("127.0.0.1", input_port))
+        sender.sendto(
+            protocol.build_ddp(0, b"\x07" * 30, rgbw=False, sequence=1, push=False),
+            ("127.0.0.1", input_port),
+        )
         sender.close()
         packets = await device.collect()
         assert len(packets) == 1
@@ -194,12 +257,18 @@ async def test_frame_timeout_sends_even_without_a_push():
 @async_test
 async def test_idle_strip_sends_nothing():
     device = FakeDevice()
-    proxy = Proxy(parse({
-        "virtual_strip": {"led_count": 10},
-        "inputs": {"ddp": {"port": free_port()}},
-        "status": {"enabled": False},
-        "targets": [{"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}],
-    }))
+    proxy = Proxy(
+        parse(
+            {
+                "virtual_strip": {"led_count": 10},
+                "inputs": {"ddp": {"port": free_port()}},
+                "status": {"enabled": False},
+                "targets": [
+                    {"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}
+                ],
+            }
+        )
+    )
     await proxy.start()
     try:
         assert await device.collect(settle=0.2) == []
@@ -211,13 +280,19 @@ async def test_idle_strip_sends_nothing():
 @async_test
 async def test_idle_refresh_keeps_resending_the_last_frame():
     device = FakeDevice()
-    proxy = Proxy(parse({
-        "virtual_strip": {"led_count": 10},
-        "inputs": {"ddp": {"port": free_port()}},
-        "status": {"enabled": False},
-        "output": {"idle_refresh_hz": 40},
-        "targets": [{"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}],
-    }))
+    proxy = Proxy(
+        parse(
+            {
+                "virtual_strip": {"led_count": 10},
+                "inputs": {"ddp": {"port": free_port()}},
+                "status": {"enabled": False},
+                "output": {"idle_refresh_hz": 40},
+                "targets": [
+                    {"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}
+                ],
+            }
+        )
+    )
     await proxy.start()
     try:
         packets = await device.collect(settle=0.25)
@@ -231,12 +306,18 @@ async def test_idle_refresh_keeps_resending_the_last_frame():
 @async_test
 async def test_status_endpoint_reports_targets():
     device = FakeDevice()
-    proxy = Proxy(parse({
-        "virtual_strip": {"led_count": 10},
-        "inputs": {"ddp": {"enabled": False}},
-        "status": {"enabled": False},
-        "targets": [{"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}],
-    }))
+    proxy = Proxy(
+        parse(
+            {
+                "virtual_strip": {"led_count": 10},
+                "inputs": {"ddp": {"enabled": False}},
+                "status": {"enabled": False},
+                "targets": [
+                    {"name": "d", "host": "127.0.0.1", "port": device.port, "count": 10}
+                ],
+            }
+        )
+    )
     await proxy.start()
     port = free_port()
     server = StatusServer("127.0.0.1", port, proxy.snapshot)

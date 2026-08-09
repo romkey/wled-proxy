@@ -56,7 +56,9 @@ def parse_ddp(packet: memoryview | bytes) -> DDPData | None:
     """Parse a DDP data packet, or return None if it carries no pixel data."""
     if len(packet) < DDP_HEADER_LEN:
         return None
-    flags, sequence, data_type, destination, offset, data_len = _DDP_HEADER.unpack_from(packet)
+    flags, sequence, data_type, destination, offset, data_len = _DDP_HEADER.unpack_from(
+        packet
+    )
 
     if flags & DDP_FLAGS_VER_MASK != DDP_FLAGS_VER1:
         return None
@@ -80,14 +82,16 @@ def parse_ddp(packet: memoryview | bytes) -> DDPData | None:
     view = packet if isinstance(packet, memoryview) else memoryview(packet)
     return DDPData(
         offset=offset,
-        data=view[start:start + data_len],
+        data=view[start : start + data_len],
         channels_per_pixel=cpp,
         push=push,
         sequence=sequence & 0x0F,
     )
 
 
-def build_ddp(offset: int, data: bytes, *, rgbw: bool, sequence: int, push: bool) -> bytes:
+def build_ddp(
+    offset: int, data: bytes, *, rgbw: bool, sequence: int, push: bool
+) -> bytes:
     """Build one DDP data packet addressed at ``offset`` channels into the display."""
     header = _DDP_HEADER.pack(
         DDP_FLAGS_VER1 | (DDP_FLAGS_PUSH if push else 0),
@@ -148,22 +152,26 @@ def parse_artnet_dmx(packet: memoryview | bytes) -> ArtnetData | None:
     return ArtnetData(
         universe=(packet[15] << 8) | packet[14],
         sequence=packet[12],
-        data=view[ARTNET_HEADER_LEN:ARTNET_HEADER_LEN + length],
+        data=view[ARTNET_HEADER_LEN : ARTNET_HEADER_LEN + length],
     )
 
 
-def build_artnet_dmx(universe: int, data: bytes, *, sequence: int, physical: int = 0) -> bytes:
+def build_artnet_dmx(
+    universe: int, data: bytes, *, sequence: int, physical: int = 0
+) -> bytes:
     """Build an ArtDmx packet. Odd length payloads are padded, as the spec requires."""
     if len(data) & 1:
         data = bytes(data) + b"\x00"
-    return b"".join((
-        ARTNET_ID,
-        ARTNET_OPCODE_OPDMX.to_bytes(2, "little"),
-        ARTNET_PROTOCOL_VERSION.to_bytes(2, "big"),
-        bytes((sequence & 0xFF, physical, universe & 0xFF, (universe >> 8) & 0x7F)),
-        len(data).to_bytes(2, "big"),
-        bytes(data),
-    ))
+    return b"".join(
+        (
+            ARTNET_ID,
+            ARTNET_OPCODE_OPDMX.to_bytes(2, "little"),
+            ARTNET_PROTOCOL_VERSION.to_bytes(2, "big"),
+            bytes((sequence & 0xFF, physical, universe & 0xFF, (universe >> 8) & 0x7F)),
+            len(data).to_bytes(2, "big"),
+            bytes(data),
+        )
+    )
 
 
 # --- E1.31 (sACN) ---------------------------------------------------------
@@ -223,7 +231,7 @@ def parse_e131(packet: memoryview | bytes) -> E131Data | None:
         sequence=packet[111],
         priority=packet[108],
         options=options,
-        data=view[E131_HEADER_LEN:E131_HEADER_LEN + count],
+        data=view[E131_HEADER_LEN : E131_HEADER_LEN + count],
     )
 
 
@@ -241,8 +249,8 @@ def build_e131(
     """Build an E1.31 data packet carrying ``data`` as zero start code DMX levels."""
     total = E131_HEADER_LEN + len(data)
     root = _E131_ROOT.pack(
-        0x0010,                     # preamble size
-        0x0000,                     # postamble size
+        0x0010,  # preamble size
+        0x0000,  # postamble size
         E131_ACN_ID,
         0x7000 | (total - 16),
         E131_VECTOR_ROOT_DATA,
@@ -261,10 +269,10 @@ def build_e131(
     dmp = _E131_DMP.pack(
         0x7000 | (total - 115),
         E131_VECTOR_DMP_SET_PROPERTY,
-        0xA1,                       # address type & data type
-        0x0000,                     # first property address
-        0x0001,                     # address increment
-        len(data) + 1,              # property value count, including start code
+        0xA1,  # address type & data type
+        0x0000,  # first property address
+        0x0001,  # address increment
+        len(data) + 1,  # property value count, including start code
     )
     return root + frame + dmp + b"\x00" + data
 
